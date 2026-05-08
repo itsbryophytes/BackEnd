@@ -12,6 +12,7 @@ import (
 
 func RunExtension(db *gorm.DB) {
 	db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+	db.Exec("CREATE EXTENSION IF NOT EXISTS vector;")
 }
 
 func SetUpDatabaseConnection() *gorm.DB {

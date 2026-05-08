@@ -5,7 +5,14 @@ import (
 	"os"
 
 	"github.com/Caknoooo/go-gin-clean-starter/middlewares"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/article"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/auth"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/chat"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/document"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/file"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/metric"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/processing"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/profile"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/user"
 	"github.com/Caknoooo/go-gin-clean-starter/providers"
 	"github.com/Caknoooo/go-gin-clean-starter/script"
@@ -64,6 +71,13 @@ func main() {
 	// Register module routes
 	user.RegisterRoutes(server, injector)
 	auth.RegisterRoutes(server, injector)
+	file.RegisterRoutes(server, injector)
+	document.RegisterRoutes(server, injector)
+	processing.RegisterRoutes(server, injector)
+	metric.RegisterRoutes(server, injector)
+	chat.RegisterRoutes(server, injector)
+	profile.RegisterRoutes(server, injector)
+	article.RegisterRoutes(server, injector)
 
 	run(server)
 }

@@ -354,14 +354,9 @@ func (%s *%s) BeforeCreate(tx *gorm.DB) (err error) {
 		migrationTemplate = fmt.Sprintf(`package migrations
 
 import (
-	"github.com/Caknoooo/go-gin-clean-starter/database"
 	"github.com/Caknoooo/go-gin-clean-starter/database/entities"
 	"gorm.io/gorm"
 )
-
-func init() {
-	database.RegisterMigration("%s", Up%s, Down%s)
-}
 
 func Up%s(db *gorm.DB) error {
 	return db.AutoMigrate(&entities.%s{})
@@ -370,18 +365,11 @@ func Up%s(db *gorm.DB) error {
 func Down%s(db *gorm.DB) error {
 	return db.Migrator().DropTable(&entities.%s{})
 }
-`, migrationName, funcName, funcName, funcName, entityName, funcName, entityName)
+`, funcName, entityName, funcName, entityName)
 	} else {
 		migrationTemplate = fmt.Sprintf(`package migrations
 
-import (
-	"github.com/Caknoooo/go-gin-clean-starter/database"
-	"gorm.io/gorm"
-)
-
-func init() {
-	database.RegisterMigration("%s", Up%s, Down%s)
-}
+import "gorm.io/gorm"
 
 func Up%s(db *gorm.DB) error {
 	return nil
@@ -390,11 +378,15 @@ func Up%s(db *gorm.DB) error {
 func Down%s(db *gorm.DB) error {
 	return nil
 }
-`, migrationName, funcName, funcName, funcName, funcName)
+`, funcName, funcName)
 	}
 
 	if err := ioutil.WriteFile(filePath, []byte(migrationTemplate), 0644); err != nil {
 		return fmt.Errorf("error creating migration file: %v", err)
+	}
+
+	if err := mm.addMigrationToMigrationFile(migrationName, funcName); err != nil {
+		fmt.Printf("Warning: Failed to register migration: %v\n", err)
 	}
 
 	fmt.Printf("Migration file created: %s\n", filePath)
@@ -466,6 +458,62 @@ func (mm *MigrationManager) addEntityToMigrationFile(entityName string) error {
 		}
 
 		newLines = append(newLines, line)
+	}
+
+	newContent := strings.Join(newLines, "\n")
+	if !strings.HasSuffix(newContent, "\n") {
+		newContent += "\n"
+	}
+
+	if err := ioutil.WriteFile(migrationFilePath, []byte(newContent), 0644); err != nil {
+		return fmt.Errorf("error writing migration file: %v", err)
+	}
+
+	return nil
+}
+
+func (mm *MigrationManager) addMigrationToMigrationFile(migrationName string, funcName string) error {
+	migrationFilePath := "database/migration.go"
+
+	content, err := ioutil.ReadFile(migrationFilePath)
+	if err != nil {
+		return fmt.Errorf("error reading migration file: %v", err)
+	}
+
+	registration := fmt.Sprintf(`	RegisterMigration(
+		"%s",
+		migrations.Up%s,
+		migrations.Down%s,
+	)
+`, migrationName, funcName, funcName)
+
+	if strings.Contains(string(content), `"`+migrationName+`"`) {
+		return nil
+	}
+
+	lines := strings.Split(string(content), "\n")
+	var newLines []string
+	inInit := false
+	inserted := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "func init() {") {
+			inInit = true
+			newLines = append(newLines, line)
+			continue
+		}
+
+		if inInit && strings.TrimSpace(line) == "}" {
+			newLines = append(newLines, strings.TrimSuffix(registration, "\n"))
+			inserted = true
+			inInit = false
+		}
+
+		newLines = append(newLines, line)
+	}
+
+	if !inserted {
+		return fmt.Errorf("init function not found in %s", migrationFilePath)
 	}
 
 	newContent := strings.Join(newLines, "\n")

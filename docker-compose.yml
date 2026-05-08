@@ -8,6 +8,34 @@ services:
       - .:/app
     ports:
       - ${GOLANG_PORT:-8888}:8888
+    environment:
+      - RAG_SERVICE_URL=http://rag:8000
+    depends_on:
+      - postgres
+      - rag
+    networks:
+      - app-network
+
+  rag:
+    build:
+      context: ../rag
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-go-gin-clean-starter}-rag
+    ports:
+      - ${RAG_PORT:-8000}:8000
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_CHAT_MODEL=${GEMINI_CHAT_MODEL:-gemini-2.5-flash}
+      - GEMINI_EMBED_MODEL=${GEMINI_EMBED_MODEL:-models/gemini-embedding-2}
+      - GEMINI_EMBED_DIM=${GEMINI_EMBED_DIM:-768}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+      - ENVIRONMENT=${RAG_ENVIRONMENT:-development}
+    depends_on:
+      - postgres
     networks:
       - app-network
 
@@ -27,7 +55,7 @@ services:
   postgres:
     hostname: postgres
     container_name: ${APP_NAME:-go-gin-clean-starter}-db
-    image: postgres:latest
+    image: pgvector/pgvector:pg15
     ports:
       - ${DB_PORT}:5432
     volumes:
