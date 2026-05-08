@@ -5,6 +5,7 @@ import (
 
 	"github.com/Caknoooo/go-gin-clean-starter/database/entities"
 	"github.com/Caknoooo/go-gin-clean-starter/pkg/rag"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/document/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -25,6 +26,7 @@ type documentController struct {
 	db        *gorm.DB
 	ragClient rag.Client
 }
+
 
 func NewDocumentController(db *gorm.DB, ragClient rag.Client) DocumentController {
 	return &documentController{db: db, ragClient: ragClient}
@@ -141,11 +143,23 @@ func (ctrl *documentController) GetDocument(c *gin.Context) {
 }
 
 func (ctrl *documentController) ConfirmDocument(c *gin.Context) {
-	resp, err := ctrl.ragClient.ConfirmDocument(c.Request.Context(), c.GetString("user_id"), c.Param("id"))
+	var req dto.ConfirmDocumentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid payload", "error": err.Error()})
+		return
+	}
+	resp, err := ctrl.ragClient.ConfirmDocument(
+		c.Request.Context(), 
+		c.GetString("user_id"), 
+		c.Param("id"), 
+		req,
+	)
+	
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
+	
 	c.JSON(http.StatusOK, resp)
 }
 
