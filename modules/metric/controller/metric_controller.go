@@ -59,7 +59,7 @@ func (ctrl *metricController) ConfirmMetrics(c *gin.Context) {
 		documentID = req.DocumentID
 	}
 
-	resp, err := ctrl.ragClient.ConfirmDocument(c.Request.Context(), c.GetString("user_id"), documentID)
+	resp, err := ctrl.ragClient.ConfirmDocument(c.Request.Context(), c.GetString("user_id"), documentID, nil)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return

@@ -14,7 +14,7 @@ type ChatSession struct {
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 
 	User     User          `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
-	Messages []ChatMessage `gorm:"foreignKey:SessionID" json:"messages,omitempty"`
+	Messages []ChatMessage `gorm:"foreignKey:SessionID;constraint:OnDelete:CASCADE" json:"messages,omitempty"`
 }
 
 type ChatMessage struct {

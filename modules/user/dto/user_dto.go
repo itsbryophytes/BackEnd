@@ -2,7 +2,6 @@ package dto
 
 import (
 	"errors"
-	"mime/multipart"
 )
 
 const (
@@ -47,11 +46,15 @@ var (
 
 type (
 	UserCreateRequest struct {
-		Name       string                `json:"name" form:"name" binding:"required,min=2,max=100"`
-		TelpNumber string                `json:"telp_number" form:"telp_number" binding:"omitempty,min=8,max=20"`
-		Email      string                `json:"email" form:"email" binding:"required,email"`
-		Password   string                `json:"password" form:"password" binding:"required,min=8"`
-		Image      *multipart.FileHeader `json:"image" form:"image"`
+		Name          string  `json:"name" form:"name" binding:"required,min=2,max=100"`
+		TelpNumber    string  `json:"telp_number" form:"telp_number" binding:"omitempty,min=8,max=20"`
+		Email         string  `json:"email" form:"email" binding:"required,email"`
+		Password      string  `json:"password" form:"password" binding:"required,min=8"`
+		DateOfBirth   string  `json:"date_of_birth" form:"date_of_birth"`
+		BiologicalSex string  `json:"biological_sex" form:"biological_sex"`
+		HeightCm      float64 `json:"height_cm" form:"height_cm"`
+		WeightKg      float64 `json:"weight_kg" form:"weight_kg"`
+		BloodType     string  `json:"blood_type" form:"blood_type"`
 	}
 
 	UserResponse struct {

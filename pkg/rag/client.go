@@ -22,8 +22,11 @@ type Client interface {
 	UploadDocument(ctx context.Context, req UploadRequest) (map[string]any, error)
 	GetStaging(ctx context.Context, userID string, documentID string) (map[string]any, error)
 	ListStaging(ctx context.Context, userID string) (map[string]any, error)
-	ConfirmDocument(ctx context.Context, userID string, documentID string) (map[string]any, error)
+	ConfirmDocument(ctx context.Context, userID string, documentID string, body any) (map[string]any, error)
+	UpdateDocument(ctx context.Context, userID string, documentID string, body any) (map[string]any, error)
+	ManualDocument(ctx context.Context, userID string, body any) (map[string]any, error)
 	DiscardDocument(ctx context.Context, req DiscardRequest) (map[string]any, error)
+	GetPendingDocuments(ctx context.Context, userID string) (map[string]any, error)
 	GetResults(ctx context.Context, userID string) (map[string]any, error)
 	ListDocuments(ctx context.Context, userID string) (map[string]any, error)
 	DeleteDocument(ctx context.Context, userID string, documentID string) (map[string]any, error)
@@ -163,8 +166,59 @@ func (c *HTTPClient) ListStaging(ctx context.Context, userID string) (map[string
 	return c.get(ctx, "/api/pipeline/staging", queryUser(userID))
 }
 
-func (c *HTTPClient) ConfirmDocument(ctx context.Context, userID string, documentID string) (map[string]any, error) {
-	return c.post(ctx, "/api/pipeline/confirm/"+url.PathEscape(documentID), queryUser(userID), nil)
+func (c *HTTPClient) ConfirmDocument(ctx context.Context, userID string, documentID string, body any) (map[string]any, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		jsonData, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(jsonData)
+	}
+	return c.post(ctx, "/api/pipeline/confirm/"+url.PathEscape(documentID), queryUser(userID), bodyReader)
+}
+
+func (c *HTTPClient) UpdateDocument(ctx context.Context, userID string, documentID string, body any) (map[string]any, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		jsonData, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(jsonData)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.url("/api/pipeline/results/"+url.PathEscape(documentID), queryUser(userID)), bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	if bodyReader != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	return c.doJSON(req)
+}
+
+
+func (c *HTTPClient) ManualDocument(ctx context.Context, userID string, body any) (map[string]any, error) {
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine manual body with user_id for RAG schema
+	var combined map[string]any
+	if err := json.Unmarshal(bodyBytes, &combined); err != nil {
+		return nil, err
+	}
+	combined["user_id"] = userID
+
+	finalBytes, _ := json.Marshal(combined)
+	return c.post(ctx, "/api/pipeline/manual", nil, bytes.NewReader(finalBytes))
+}
+
+func (c *HTTPClient) GetPendingDocuments(ctx context.Context, userID string) (map[string]any, error) {
+	return c.get(ctx, "/api/pipeline/staging", queryUser(userID))
 }
 
 func (c *HTTPClient) DiscardDocument(ctx context.Context, discard DiscardRequest) (map[string]any, error) {
@@ -217,6 +271,9 @@ func (c *HTTPClient) post(ctx context.Context, path string, q url.Values, body i
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url(path, q), body)
 	if err != nil {
 		return nil, err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 	return c.doJSON(req)
 }

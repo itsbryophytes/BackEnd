@@ -14,7 +14,7 @@ var (
 )
 
 type HealthProfileRequest struct {
-	Age                *int     `json:"age"`
+	DateOfBirth        string   `json:"date_of_birth"`
 	BiologicalSex      string   `json:"biological_sex"`
 	HeightCm           *float64 `json:"height_cm"`
 	WeightKg           *float64 `json:"weight_kg"`
@@ -27,7 +27,7 @@ type HealthProfileRequest struct {
 type HealthProfileResponse struct {
 	ID                 string   `json:"id"`
 	UserID             string   `json:"user_id"`
-	Age                *int     `json:"age"`
+	DateOfBirth        string   `json:"date_of_birth"`
 	BiologicalSex      string   `json:"biological_sex"`
 	HeightCm           *float64 `json:"height_cm"`
 	WeightKg           *float64 `json:"weight_kg"`

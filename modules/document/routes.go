@@ -17,10 +17,12 @@ func RegisterRoutes(server *gin.Engine, injector *do.Injector) {
 	{
 		routes.POST("/upload", middlewares.Authenticate(jwtService), ctrl.UploadDocument)
 		routes.GET("/pending", middlewares.Authenticate(jwtService), ctrl.GetPendingDocuments)
+		routes.POST("/manual", middlewares.Authenticate(jwtService), ctrl.CreateManualDocument)
 		routes.POST("", middlewares.Authenticate(jwtService), ctrl.CreateDocument)
 		routes.GET("", middlewares.Authenticate(jwtService), ctrl.GetDocuments)
 		routes.GET("/:id", middlewares.Authenticate(jwtService), ctrl.GetDocument)
 		routes.POST("/:id/confirm", middlewares.Authenticate(jwtService), ctrl.ConfirmDocument)
+		routes.PUT("/:id", middlewares.Authenticate(jwtService), ctrl.UpdateDocument)
 		routes.POST("/:id/discard", middlewares.Authenticate(jwtService), ctrl.DiscardDocument)
 		routes.DELETE("/:id", middlewares.Authenticate(jwtService), ctrl.DeleteDocument)
 	}

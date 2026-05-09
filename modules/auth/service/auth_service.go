@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Caknoooo/go-gin-clean-starter/database/entities"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/auth/dto"
@@ -68,6 +69,36 @@ func (s *authService) Register(ctx context.Context, req userDto.UserCreateReques
 
 	createdUser, err := s.userRepository.Register(ctx, s.db, user)
 	if err != nil {
+		return userDto.UserResponse{}, err
+	}
+
+	// Create health profile
+	var dob *time.Time
+	if req.DateOfBirth != "" {
+		t, err := time.Parse("2006-01-02", req.DateOfBirth)
+		if err == nil {
+			dob = &t
+		}
+	}
+
+	profile := entities.UserHealthProfile{
+		ID:            uuid.New(),
+		UserID:        createdUser.ID,
+		DateOfBirth:   dob,
+		BiologicalSex: req.BiologicalSex,
+		BloodType:     req.BloodType,
+	}
+
+	if req.HeightCm > 0 {
+		profile.HeightCm = &req.HeightCm
+	}
+	if req.WeightKg > 0 {
+		profile.WeightKg = &req.WeightKg
+	}
+
+	if err := s.db.Create(&profile).Error; err != nil {
+		// Log error but don't fail registration? 
+		// Actually, it's better to ensure profile is created.
 		return userDto.UserResponse{}, err
 	}
 

@@ -1,11 +1,15 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
+	"time"
+
 	"github.com/Caknoooo/go-gin-clean-starter/database/entities"
-	"github.com/Caknoooo/go-gin-clean-starter/pkg/rag"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/document/dto"
+	"github.com/Caknoooo/go-gin-clean-starter/pkg/rag"
+	"github.com/Caknoooo/go-gin-clean-starter/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -18,6 +22,8 @@ type DocumentController interface {
 	GetPendingDocuments(c *gin.Context)
 	GetDocument(c *gin.Context)
 	ConfirmDocument(c *gin.Context)
+	UpdateDocument(c *gin.Context)
+	CreateManualDocument(c *gin.Context)
 	DiscardDocument(c *gin.Context)
 	DeleteDocument(c *gin.Context)
 }
@@ -26,7 +32,6 @@ type documentController struct {
 	db        *gorm.DB
 	ragClient rag.Client
 }
-
 
 func NewDocumentController(db *gorm.DB, ragClient rag.Client) DocumentController {
 	return &documentController{db: db, ragClient: ragClient}
@@ -56,7 +61,12 @@ func (ctrl *documentController) UploadDocument(c *gin.Context) {
 		File:         opened,
 	})
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		// Log the error for internal debugging
+		fmt.Printf("RAG Upload Error: %v\n", err)
+		c.JSON(http.StatusBadGateway, gin.H{
+			"message": "Upstream RAG service error",
+			"error":   err.Error(),
+		})
 		return
 	}
 
@@ -92,24 +102,21 @@ func (ctrl *documentController) CreateDocument(c *gin.Context) {
 
 func (ctrl *documentController) GetDocuments(c *gin.Context) {
 	userID := c.GetString("user_id")
-	ragDocs, err := ctrl.ragClient.ListDocuments(c.Request.Context(), userID)
+	results, err := ctrl.ragClient.GetResults(c.Request.Context(), userID)
 	if err == nil {
-		c.JSON(http.StatusOK, ragDocs)
+		c.JSON(http.StatusOK, results)
 		return
 	}
 
-	var documents []entities.Document
-	query := ctrl.db.Order("created_at DESC")
-	if userID != "" {
-		query = query.Where("user_id = ?", userID)
-	}
-
-	if dbErr := query.Find(&documents).Error; dbErr != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": dbErr.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"documents": documents, "rag_error": err.Error()})
+	// RAG service is unavailable. Returning bare local entities would produce
+	// records with no structured_data, which renders as "No source" in the UI.
+	// Return an empty result set and surface the error so the caller knows why.
+	fmt.Printf("RAG GetResults error (returning empty): %v\n", err)
+	c.JSON(http.StatusOK, gin.H{
+		"results":   []any{},
+		"count":     0,
+		"rag_error": err.Error(),
+	})
 }
 
 func (ctrl *documentController) GetPendingDocuments(c *gin.Context) {
@@ -149,18 +156,89 @@ func (ctrl *documentController) ConfirmDocument(c *gin.Context) {
 		return
 	}
 	resp, err := ctrl.ragClient.ConfirmDocument(
-		c.Request.Context(), 
-		c.GetString("user_id"), 
-		c.Param("id"), 
+		c.Request.Context(),
+		c.GetString("user_id"),
+		c.Param("id"),
 		req,
 	)
-	
+
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	
-	c.JSON(http.StatusOK, resp)
+
+	c.JSON(http.StatusOK, utils.BuildResponseSuccess("Document confirmed", resp))
+}
+
+func (ctrl *documentController) UpdateDocument(c *gin.Context) {
+	var req dto.ConfirmDocumentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid payload", "error": err.Error()})
+		return
+	}
+	resp, err := ctrl.ragClient.UpdateDocument(
+		c.Request.Context(),
+		c.GetString("user_id"),
+		c.Param("id"),
+		req,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.BuildResponseSuccess("Document updated", resp))
+}
+
+func (ctrl *documentController) CreateManualDocument(c *gin.Context) {
+	var req dto.ConfirmDocumentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := ctrl.ragClient.ManualDocument(
+		c.Request.Context(),
+		c.GetString("user_id"),
+		req,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Parse document_id from RAG response
+	docIDStr, ok := resp["document_id"].(string)
+	if !ok || docIDStr == "" {
+		c.JSON(http.StatusBadGateway, gin.H{"message": "RAG service failed to generate document ID", "rag_response": resp})
+		return
+	}
+
+	docID, err := uuid.Parse(docIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Invalid UUID returned by RAG", "error": err.Error()})
+		return
+	}
+
+	userUID, _ := uuid.Parse(c.GetString("user_id"))
+
+	// Save to local database so it shows up in lists
+	newDoc := entities.Document{
+		ID:           docID,
+		UserID:       userUID,
+		DocumentType: "lab_result",
+		Title:        req.LabName + " (Manual)",
+		Status:       "confirmed",
+		CreatedAt:    time.Now(),
+	}
+
+	if err := ctrl.db.Create(&newDoc).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save local record: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.BuildResponseSuccess("Manual health record saved", resp))
 }
 
 func (ctrl *documentController) DiscardDocument(c *gin.Context) {

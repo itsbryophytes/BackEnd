@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Caknoooo/go-gin-clean-starter/database/entities"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/profile/dto"
@@ -41,9 +42,24 @@ func (s *profileService) UpsertProfile(ctx context.Context, userID string, req d
 		return dto.HealthProfileResponse{}, err
 	}
 
+	var dob *time.Time
+	if req.DateOfBirth != "" {
+		// Try YYYY-MM-DD first
+		t, err := time.Parse("2006-01-02", req.DateOfBirth)
+		if err == nil {
+			dob = &t
+		} else {
+			// Try RFC3339 as fallback
+			t, err = time.Parse(time.RFC3339, req.DateOfBirth)
+			if err == nil {
+				dob = &t
+			}
+		}
+	}
+
 	profile := entities.UserHealthProfile{
 		UserID:             parsedUserID,
-		Age:                req.Age,
+		DateOfBirth:        dob,
 		BiologicalSex:      req.BiologicalSex,
 		HeightCm:           req.HeightCm,
 		WeightKg:           req.WeightKg,
@@ -61,10 +77,15 @@ func (s *profileService) UpsertProfile(ctx context.Context, userID string, req d
 }
 
 func toResponse(p entities.UserHealthProfile) dto.HealthProfileResponse {
+	var dobStr string
+	if p.DateOfBirth != nil {
+		dobStr = p.DateOfBirth.Format("2006-01-02")
+	}
+
 	return dto.HealthProfileResponse{
 		ID:                 p.ID.String(),
 		UserID:             p.UserID.String(),
-		Age:                p.Age,
+		DateOfBirth:        dobStr,
 		BiologicalSex:      p.BiologicalSex,
 		HeightCm:           p.HeightCm,
 		WeightKg:           p.WeightKg,

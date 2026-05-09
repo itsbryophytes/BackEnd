@@ -9,7 +9,7 @@ import (
 type UserHealthProfile struct {
 	ID                 uuid.UUID `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
 	UserID             uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"user_id"`
-	Age                *int      `gorm:"type:int" json:"age"`
+	DateOfBirth        *time.Time `gorm:"type:date" json:"date_of_birth"`
 	BiologicalSex      string    `gorm:"type:varchar(10)" json:"biological_sex"`
 	HeightCm           *float64  `gorm:"type:float" json:"height_cm"`
 	WeightKg           *float64  `gorm:"type:float" json:"weight_kg"`
