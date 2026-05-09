@@ -37,6 +37,9 @@ func Migrate(db *gorm.DB) error {
 		&entities.ChatSession{},
 		&entities.ChatMessage{},
 		&entities.Article{},
+		&entities.BloodSugarLog{},
+		&entities.BloodPressureLog{},
+		&entities.WeightLog{},
 	); err != nil {
 		return err
 	}

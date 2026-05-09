@@ -21,6 +21,9 @@ import (
 	userController "github.com/Caknoooo/go-gin-clean-starter/modules/user/controller"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/user/repository"
 	userService "github.com/Caknoooo/go-gin-clean-starter/modules/user/service"
+	healthLogController "github.com/Caknoooo/go-gin-clean-starter/modules/health_log/controller"
+	healthLogRepo "github.com/Caknoooo/go-gin-clean-starter/modules/health_log/repository"
+	healthLogService "github.com/Caknoooo/go-gin-clean-starter/modules/health_log/service"
 	"github.com/Caknoooo/go-gin-clean-starter/pkg/constants"
 	"github.com/Caknoooo/go-gin-clean-starter/pkg/rag"
 	"github.com/samber/do"
@@ -50,6 +53,7 @@ func RegisterDependencies(injector *do.Injector) {
 	fileRepository := fileRepo.NewFileRepository(db)
 	chatRepository := chatRepo.NewChatRepository()
 	profileRepository := profileRepo.NewProfileRepository()
+	healthLogRepository := healthLogRepo.NewHealthLogRepository(db)
 
 	// Services
 	userSvc := userService.NewUserService(userRepository, db)
@@ -57,6 +61,7 @@ func RegisterDependencies(injector *do.Injector) {
 	fileSvc := fileService.NewFileService(fileRepository)
 	chatSvc := chatService.NewChatService(ragClient, chatRepository, db)
 	profileSvc := profileService.NewProfileService(profileRepository, db)
+	healthLogSvc := healthLogService.NewHealthLogService(healthLogRepository)
 
 	// Controllers
 	do.Provide(injector, func(i *do.Injector) (userController.UserController, error) {
@@ -86,6 +91,9 @@ func RegisterDependencies(injector *do.Injector) {
 	do.Provide(injector, func(i *do.Injector) (articleController.ArticleController, error) {
 		return articleController.NewArticleController(db), nil
 	})
+	do.Provide(injector, func(i *do.Injector) (healthLogController.HealthLogController, error) {
+		return healthLogController.NewHealthLogController(healthLogSvc), nil
+	})
 
-	_ = jwtService // used via named injection in routes
+	_ = jwtService
 }

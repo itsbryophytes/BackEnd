@@ -201,20 +201,16 @@ func (c *HTTPClient) UpdateDocument(ctx context.Context, userID string, document
 
 
 func (c *HTTPClient) ManualDocument(ctx context.Context, userID string, body any) (map[string]any, error) {
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
+	var bodyReader io.Reader
+	if body != nil {
+		jsonData, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewReader(jsonData)
 	}
 
-	// Combine manual body with user_id for RAG schema
-	var combined map[string]any
-	if err := json.Unmarshal(bodyBytes, &combined); err != nil {
-		return nil, err
-	}
-	combined["user_id"] = userID
-
-	finalBytes, _ := json.Marshal(combined)
-	return c.post(ctx, "/api/pipeline/manual", nil, bytes.NewReader(finalBytes))
+	return c.post(ctx, "/api/pipeline/manual", queryUser(userID), bodyReader)
 }
 
 func (c *HTTPClient) GetPendingDocuments(ctx context.Context, userID string) (map[string]any, error) {

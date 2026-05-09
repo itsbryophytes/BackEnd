@@ -14,6 +14,7 @@ import (
 	"github.com/Caknoooo/go-gin-clean-starter/modules/processing"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/profile"
 	"github.com/Caknoooo/go-gin-clean-starter/modules/user"
+	"github.com/Caknoooo/go-gin-clean-starter/modules/health_log"
 	"github.com/Caknoooo/go-gin-clean-starter/providers"
 	"github.com/Caknoooo/go-gin-clean-starter/script"
 	"github.com/samber/do"
@@ -68,7 +69,6 @@ func main() {
 	server := gin.Default()
 	server.Use(middlewares.CORSMiddleware())
 
-	// Register module routes
 	user.RegisterRoutes(server, injector)
 	auth.RegisterRoutes(server, injector)
 	file.RegisterRoutes(server, injector)
@@ -78,6 +78,7 @@ func main() {
 	chat.RegisterRoutes(server, injector)
 	profile.RegisterRoutes(server, injector)
 	article.RegisterRoutes(server, injector)
+	health_log.RegisterRoutes(server, injector)
 
 	run(server)
 }
