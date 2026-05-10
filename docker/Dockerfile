@@ -21,4 +21,4 @@ RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /app/main .
 
-CMD ["./main", "--migrate:run", "--seed"]
+CMD ["./main", "--migrate:run"]
