@@ -57,6 +57,17 @@ func (ctrl *articleController) CreateArticle(c *gin.Context) {
 		article.ID = uuid.New()
 	}
 
+	if article.AuthorID == "" {
+		if userID, exists := c.Get("user_id"); exists {
+			article.AuthorID = userID.(string)
+		}
+	}
+
+	if article.Status == "published" && article.PublishedAt == nil {
+		now := time.Now()
+		article.PublishedAt = &now
+	}
+
 	if err := ctrl.db.Create(&article).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
@@ -81,8 +92,20 @@ func (ctrl *articleController) UpdateArticle(c *gin.Context) {
 	article.Title = req.Title
 	article.Content = req.Content
 	article.CoverImageURL = req.CoverImageURL
+	
+	if req.AuthorID != "" {
+		article.AuthorID = req.AuthorID
+	}
+	
+	if req.PublishedAt != nil {
+		article.PublishedAt = req.PublishedAt
+	} else if req.Status == "published" && article.Status != "published" {
+		now := time.Now()
+		article.PublishedAt = &now
+	} else if req.Status == "draft" {
+		article.PublishedAt = nil
+	}
 	article.Status = req.Status
-	article.PublishedAt = req.PublishedAt
 
 	if err := ctrl.db.Save(&article).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
