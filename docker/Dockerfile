@@ -1,12 +1,24 @@
-FROM golang:1.26-alpine
+# Build stage
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
 RUN apk add --no-cache git
-RUN go install github.com/air-verse/air@v1.65.1
+
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
 
-RUN go mod tidy
+RUN go build -o main cmd/main.go
 
-CMD ["air"]
+# Run stage
+FROM alpine:latest
+
+WORKDIR /app
+
+RUN apk --no-cache add ca-certificates
+
+COPY --from=builder /app/main .
+
+CMD ["./main", "--migrate:run", "--seed"]
