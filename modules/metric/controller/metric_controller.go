@@ -70,7 +70,8 @@ func (ctrl *metricController) ConfirmMetrics(c *gin.Context) {
 
 func (ctrl *metricController) UpdateMetric(c *gin.Context) {
 	var metric entities.HealthMetric
-	if err := ctrl.db.First(&metric, "id = ?", c.Param("id")).Error; err != nil {
+	userID := c.GetString("user_id")
+	if err := ctrl.db.First(&metric, "id = ? AND user_id = ?", c.Param("id"), userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": err.Error()})
 		return
 	}
@@ -95,7 +96,8 @@ func (ctrl *metricController) UpdateMetric(c *gin.Context) {
 }
 
 func (ctrl *metricController) DeleteMetric(c *gin.Context) {
-	if err := ctrl.db.Delete(&entities.HealthMetric{}, "id = ?", c.Param("id")).Error; err != nil {
+	userID := c.GetString("user_id")
+	if err := ctrl.db.Delete(&entities.HealthMetric{}, "id = ? AND user_id = ?", c.Param("id"), userID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}

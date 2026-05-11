@@ -32,7 +32,7 @@ func (ctrl *processingController) RunOCR(c *gin.Context) {
 	}
 
 	if dbErr := ctrl.db.Model(&entities.Document{}).
-		Where("id = ?", c.Param("document_id")).
+		Where("id = ? AND user_id = ?", c.Param("document_id"), c.GetString("user_id")).
 		Update("status", "processing").Error; dbErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": dbErr.Error()})
 		return
@@ -49,7 +49,7 @@ func (ctrl *processingController) GetStatus(c *gin.Context) {
 	}
 
 	var document entities.Document
-	if dbErr := ctrl.db.First(&document, "id = ?", c.Param("document_id")).Error; dbErr != nil {
+	if dbErr := ctrl.db.First(&document, "id = ? AND user_id = ?", c.Param("document_id"), c.GetString("user_id")).Error; dbErr != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": dbErr.Error(), "rag_error": err.Error()})
 		return
 	}
@@ -65,7 +65,9 @@ func (ctrl *processingController) GetResult(c *gin.Context) {
 	}
 
 	var result entities.OCRResult
-	if dbErr := ctrl.db.First(&result, "document_id = ?", c.Param("document_id")).Error; dbErr != nil {
+	if dbErr := ctrl.db.Joins("JOIN documents ON documents.id = ocr_results.document_id").
+		Where("ocr_results.document_id = ? AND documents.user_id = ?", c.Param("document_id"), c.GetString("user_id")).
+		First(&result).Error; dbErr != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": dbErr.Error(), "rag_error": err.Error()})
 		return
 	}
