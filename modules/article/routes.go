@@ -15,14 +15,12 @@ func RegisterRoutes(server *gin.Engine, injector *do.Injector) {
 
 	routes := server.Group("/api/articles")
 	{
-		// public
 		routes.GET("", ctrl.GetArticles)
 		routes.GET("/:id", ctrl.GetArticle)
 
-		// protected (admin nanti bisa ditambah middleware role)
-		routes.POST("", middlewares.Authenticate(jwtService), ctrl.CreateArticle)
-		routes.PUT("/:id", middlewares.Authenticate(jwtService), ctrl.UpdateArticle)
-		routes.DELETE("/:id", middlewares.Authenticate(jwtService), ctrl.DeleteArticle)
-		routes.POST("/:id/publish", middlewares.Authenticate(jwtService), ctrl.PublishArticle)
+		routes.POST("", middlewares.Authenticate(jwtService), middlewares.AuthorizeRole("admin"), ctrl.CreateArticle)
+		routes.PUT("/:id", middlewares.Authenticate(jwtService), middlewares.AuthorizeRole("admin"), ctrl.UpdateArticle)
+		routes.DELETE("/:id", middlewares.Authenticate(jwtService), middlewares.AuthorizeRole("admin"), ctrl.DeleteArticle)
+		routes.POST("/:id/publish", middlewares.Authenticate(jwtService), middlewares.AuthorizeRole("admin"), ctrl.PublishArticle)
 	}
 }
