@@ -129,22 +129,22 @@ func (s *healthLogService) DeleteWeight(ctx context.Context, userID uuid.UUID, i
 }
 
 func classifyBP(sys, dia int) string {
-	if sys > 180 || dia > 120 {
+	if sys >= 180 || dia >= 120 {
 		return "crisis"
 	}
-	if sys >= 140 || dia >= 90 {
+	if sys >= 160 || dia >= 100 {
 		return "hypertension stage 2"
 	}
-	if sys >= 130 || dia >= 80 {
+	if sys >= 140 || dia >= 90 {
 		return "hypertension stage 1"
 	}
-	if sys >= 120 && dia < 80 {
-		return "elevated"
+	if sys >= 120 || dia > 80 {
+		return "prehypertension"
 	}
-	if sys < 120 && dia < 80 {
-		return "normal"
+	if sys < 90 || dia < 60 {
+		return "low"
 	}
-	return "hypertension stage 1"
+	return "normal"
 }
 
 func classifyBMI(bmi float64) string {
